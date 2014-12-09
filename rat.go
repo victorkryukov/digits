@@ -18,7 +18,7 @@ const (
 func init() {
 	factLookup = make(map[int64]int64)
 	sqrtLookup = make(map[int64]int64)
-	factLookup[0] = 0
+	factLookup[0] = 1
 	var i, fact int64
 	fact = 2
 	// We are starting from 3, since 1! = 1 and 2! = 2
@@ -31,49 +31,56 @@ func init() {
 	}
 }
 
-// fact calculates n! using lookup table, and returns -1 for invalid inputs
+// fact calculates n! using lookup table, and returns MaxInt64 for invalid inputs
 func fact(n int64) int64 {
 	if n < 0 || n > maxFactorial || (n < 3 && n != 0) {
-		return -1
+		return MaxInt64
 	}
 	return factLookup[n]
 }
 
-// sqrt calculates sqrt[n] using lookup table, and returns -1 for invalid inputs
+// sqrt calculates sqrt[n] using lookup table, and returns MaxInt64 for invalid inputs
 // or non-integer square roots
 func sqrt(n int64) int64 {
 	if n < 2 {
-		return -1
+		return MaxInt64
 	} else if n > maxSqrt2 {
 		s := int64(math.Floor(math.Sqrt(float64(n))))
 		if s*s == n {
 			return s
 		} else {
-			return -1
+			return MaxInt64
 		}
 	}
 	// n <= maxSqrt2, so use the lookup table
 	if r, ok := sqrtLookup[n]; ok {
 		return r
 	}
-	return -1
+	return MaxInt64
 }
 
 // root calculate a ^ (1/b) for positive b, and returns -1 for non-integer results or invalid inputs.
 func root(a, b int64) int64 {
-	if a < 0 || b <= 0 {
-		return -1
+	if a == 0 && b == 0 {
+		return MaxInt64
 	} else if b == 1 || a == 0 || a == 1 {
 		return a
 	} else if b == 2 {
 		return sqrt(a)
 	}
-	// a > 0, b > 2
-	r := int64(math.Floor(math.Pow(float64(a), float64(b))))
+	// a != 0, b > 2
+	var isOdd int64 = 1
+	if a < 0 && b%2 == 1 { // math.Pow doesn't support e.g. -8 ^ (1/3)
+		isOdd = -1
+		a = -a
+	} else if a < 0 {
+		return MaxInt64
+	}
+	r := int64(math.Floor(math.Pow(float64(a), 1/float64(b)) + 0.5))
 	if pow(r, b) == a {
-		return r
+		return isOdd * r
 	} else {
-		return -1
+		return MaxInt64
 	}
 }
 
@@ -82,18 +89,17 @@ const MaxInt64 = 9223372036854775807
 // pow returns a^b, if both of them are small enough, or MaxInt64 if the result is invalid
 // FIXME: Once we support ratios, we should support a^r where r is a ratio, too.
 func pow(a, b int64) int64 {
-	if a == 0 || b < 0 {
+	if a == 0 && b <= 0 {
 		return MaxInt64
-	} else if a == 0 {
-		return 0
+	} else if a == 0 || b == 1 {
+		return a
 	} else if b == 0 {
 		return 1
 	}
-	if b > 15 && (a > 15 || a < -15) {
+	if b > 15 && (a > 15 || a < -15) { // 16 ^ 16 > MaxInt64
 		return MaxInt64
 	}
 	if p := math.Pow(float64(a), float64(b)); math.Abs(p) > MaxInt64 {
-		// Overflow
 		return MaxInt64
 	} else {
 		return int64(p)
@@ -163,7 +169,7 @@ func (r Rat) Add(r1 Rat) Rat {
 }
 
 func (r Rat) Sub(r1 Rat) Rat {
-	return r.Add(Rat{n: -r.n, d: r.d})
+	return r.Add(Rat{n: -r1.n, d: r1.d})
 }
 
 func (r Rat) Mul(r1 Rat) Rat {
@@ -181,6 +187,7 @@ func (r Rat) Div(r1 Rat) Rat {
 }
 
 func (r Rat) Pow(r1 Rat) (Rat, error) {
+	r1 = r1.Normalize()
 	if r1.n < 0 {
 		if r.n == 0 {
 			return BadRat, fmt.Errorf("Cannot raise 0 to %d", r1.n)
@@ -196,16 +203,13 @@ func (r Rat) Pow(r1 Rat) (Rat, error) {
 		return BadRat, fmt.Errorf("Cannot calculate %d^%d", r.d, r1.n)
 	}
 	if r1.d == 1 {
-		return Rat{n1, d1}, nil
+		return Rat{n1, d1}.Normalize(), nil
 	} else {
-		if n1 < 0 || d1 < 0 {
-			return BadRat, fmt.Errorf("Cannot calculate root[%d] of %s ", r1.d, Rat{n: n1, d: d1})
-		}
 		n2, d2 := root(n1, r1.d), root(d1, r1.d)
-		if n2 != -1 && d2 != -1 {
-			return Rat{n: n2, d: d2}, nil
+		if n2 != MaxInt64 && d2 != MaxInt64 {
+			return Rat{n: n2, d: d2}.Normalize(), nil
 		} else {
-			return BadRat, fmt.Errorf("Cannot calculate root[%d] of %s ", r1.d, Rat{n: n1, d: d1})
+			return BadRat, fmt.Errorf("Cannot calculate root[%d] of %s (2), n2 = %d, d2 = %d", r1.d, Rat{n: n1, d: d1}, n2, d2)
 		}
 	}
 }
@@ -217,7 +221,7 @@ func (r Rat) Fact() (Rat, error) {
 	if r.n == 1 || r.n == 2 {
 		return r, nil
 	}
-	if f := fact(r.n); f == -1 {
+	if f := fact(r.n); f == MaxInt64 {
 		return BadRat, fmt.Errorf("Cannot calculate %d!", r)
 	} else {
 		return Rat{f, 1}, nil
@@ -225,19 +229,26 @@ func (r Rat) Fact() (Rat, error) {
 }
 
 func (r Rat) Less(r1 Rat) bool {
-	return r.n*r1.d < r.d*r1.n
+	x := r.n*r1.d < r.d*r1.n
+	if r.d*r1.d > 0 {
+		return x
+	} else {
+		return !x
+	}
 }
 
 func (r Rat) Negative() bool {
+	r = r.Normalize()
 	return r.n < 0
 }
 
 func (r Rat) Integer() bool {
+	r = r.Normalize()
 	return r.d == 1
 }
 
 func (r Rat) Minus() Rat {
-	return Rat{-r.n, r.d}
+	return Rat{-r.n, r.d}.Normalize()
 }
 
 func (r Rat) Value() float64 {
@@ -245,10 +256,13 @@ func (r Rat) Value() float64 {
 }
 
 func (r Rat) Equal(r1 Rat) bool {
+	r = r.Normalize()
+	r1 = r1.Normalize()
 	return r.n == r1.n && r.d == r1.d
 }
 
 func (r Rat) Even() bool {
+	r = r.Normalize()
 	return r.d == 1 && r.n%2 == 0
 }
 
