@@ -569,9 +569,9 @@ func (p SolutionSlice) Print(all bool, min, max int64) {
 			continue
 		}
 		if all {
-			fmt.Printf("---\nAll formulas for number %d up to depth = %d:\n", f.val, maxDepth)
+			fmt.Printf("---\nAll formulas for number %s up to depth = %d:\n", f.val, maxDepth)
 		} else {
-			fmt.Printf("%d\t= ", f.val)
+			fmt.Printf("%s\t= ", f.val)
 		}
 		answer := []string{}
 		for _, n := range solutions[f] {
