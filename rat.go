@@ -127,29 +127,27 @@ func (r Rat) String() string {
 
 // Normalize return {d / gcd(n, d), n / gcd(n, d)}, making sure that denominator positive.
 func (r Rat) Normalize() Rat {
-	g := gcd(r.d, r.n)
-	n1, d1 := r.n/g, r.d/g
-	if d1 < 0 {
+	n1, d1 := r.n, r.d
+	if r.d < 0 {
 		n1, d1 = -n1, -d1
 	}
-	return Rat{n: n1, d: d1}
+	var g int64
+	if n1 < 0 {
+		g = gcd(-n1, d1)
+	} else {
+		g = gcd(n1, d1)
+	}
+	return Rat{n: n1 / g, d: d1 / g}
 }
 
 func gcd(a, b int64) int64 {
-	if a < 0 {
-		return gcd(-a, b)
-	} else if b < 0 {
-		return gcd(a, -b)
-	} else if a < b {
-		return gcd(b, a)
-	}
-	// a > b >= 0
-	if b == 0 {
+	if a <= 0 && b <= 0 {
+		return MaxInt64
+	} else if a == 0 {
+		return b
+	} else if b == 0 {
 		return a
-	} else if b == 1 {
-		return 1
 	}
-	// a > b > 1 at this point
 	return gcd(b, a%b)
 }
 

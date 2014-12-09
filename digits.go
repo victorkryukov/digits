@@ -221,7 +221,7 @@ func (n *Node) Simplify() *Node {
 			{OpAdd, OpAdd, OpAdd, OpAdd}, // a + (b + c) => (a + b) + c
 			{OpSub, OpSub, OpSub, OpAdd}, // a - (b - c) => (a - b) + c
 			{OpMul, OpMul, OpMul, OpMul}, // a * (b * c) => (a * b) * c
-			{OpMul, OpDiv, OpMul, OpDiv}, // a * (b / c) => (a * b) / c
+			// to avoid overflow {OpMul, OpDiv, OpMul, OpDiv}, // a * (b / c) => (a * b) / c
 			{OpDiv, OpDiv, OpDiv, OpMul}, // a / (b / c) => (a / b) * c
 		} {
 			n1 = n1.transformTrio(t[0], t[1], t[2], t[3])
@@ -364,10 +364,9 @@ func (s Solution) Add(v *Node) {
 }
 
 // Apply an unary operator to this solution, if possible, and add to all solutions
-// found so far. Returns a list of solutions that can be received this way,
-// including the original (= do nothing).
+// found so far.
 func (s Solution) Unary(op Op) Solution {
-	if s.val.Zero() {
+	if s.val.Zero() || (s.val.Equal(Rat{1, 1}) && op != OpMinus) {
 		return s
 	}
 	var s1 Solution
@@ -375,6 +374,9 @@ func (s Solution) Unary(op Op) Solution {
 	case OpMinus:
 		s1 = Solution{val: s.val.Minus(), start: s.start, end: s.end}
 	case OpFact:
+		if s.val.Less(Rat{3, 1}) {
+			return NoSolution
+		}
 		f, err := s.val.Fact()
 		if err == nil {
 			s1 = Solution{val: f, start: s.start, end: s.end}
@@ -482,6 +484,9 @@ func (p SolutionSlice) Sort() {
 func (s Solution) AllUnary() SolutionSlice {
 	if s.val.Zero() {
 		return SolutionSlice{s}
+	}
+	if s.val.Equal(Rat{1, 1}) || s.val.Equal(Rat{-1, 1}) {
+		return SolutionSlice{s, Solution{s.val.Minus(), s.start, s.end}}
 	}
 	result := SolutionSlice{s}
 	s1 := s.Unary(OpMinus)
