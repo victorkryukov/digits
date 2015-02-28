@@ -55,9 +55,13 @@ func (n *Node) valid() bool {
 	}
 }
 
-// newNode creates a new formula Node.
+// newNode creates a new formula Node. It panics if requested Node will be not valid.
 func newNode(left *Node, op Op, right *Node) *Node {
-	return &Node{left: left, op: op, right: right}
+	n := &Node{left: left, op: op, right: right}
+	if !n.valid() {
+		panic(fmt.Sprintf("Cannot create non-valid node: %v %v %v", left, op, right))
+	}
+	return n
 }
 
 // newValNode creates a new value Node from a rational.
@@ -84,21 +88,16 @@ func (n *Node) Depth() int64 {
 	return depth + 1
 }
 
+// Equal returns true if two nodes have identical structure and leafs.
 func (n *Node) Equal(n1 *Node) bool {
-	if n.val != n1.val || n.op != n1.op {
+	if n1 == nil || n.op != n1.op {
 		return false
 	}
-	if (n.left == nil && n1.left != nil) ||
-		(n.left != nil && n1.left == nil) ||
-		(n.left != nil && n1.left != nil && !n.left.Equal(n1.left)) {
-		return false
+	if n.op != OpNull {
+		return n.left.Equal(n1.left) && (n.right == nil || n.right.Equal(n1.right))
+	} else {
+		return n.val.Equal(n1.val)
 	}
-	if (n.right == nil && n1.right != nil) ||
-		(n.right != nil && n1.right == nil) ||
-		(n.right != nil && n1.right != nil && !n.right.Equal(n1.right)) {
-		return false
-	}
-	return true
 }
 
 // transformDuo transorms all expressions of the form (op1 a) op2 (op3 b) into op4 (a op5 b),
