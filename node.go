@@ -9,15 +9,17 @@ type Op byte // Operators
 
 const (
 	OpNull Op = iota
+
 	// Binary ops start here
 	OpAdd
 	OpSub
 	OpMul
 	OpDiv
 	OpPow
+
 	// Unary ops start here
-	OpFact  // factorial
-	OpSqrt  // square root
+	OpFact
+	OpSqrt
 	OpMinus // unary minus
 )
 
@@ -33,71 +35,13 @@ var opNames = map[Op]string{
 	OpMinus: "-",
 }
 
+// Node represents a formula parse tree, storing value (for a leaf) or
+// operand with left and right sub-nodes. Nodes with unary operators will have their
+// right sub-node nil.
 type Node struct {
 	left, right *Node
-	val         Rat // Number stored in this node
-
-	// Operation to be perfomed on this node. Require left != nil && right != nil for binary
-	// and left != nil && right = nil for unary operators.
-	op Op
-}
-
-var DEBUG bool
-
-// return true if we need parenthesis around n.String() in places like _ */-^ n
-func (n *Node) needParenthesis() bool {
-	if DEBUG {
-		return true
-	}
-	return n.op >= OpAdd && n.op <= OpPow
-}
-
-// String returns a formula for n, sometimes (always *sigh*) with excessive paranthesis
-func (n *Node) String() string {
-	var left, right string
-	if n.left != nil {
-		left = n.left.String()
-	}
-	if n.right != nil {
-		right = n.right.String()
-		if n.right.needParenthesis() {
-			right = "(" + right + ")"
-		}
-	}
-	if left == "" && right == "" {
-		return n.val.String()
-	} else {
-		switch n.op {
-		case OpAdd:
-			return fmt.Sprintf("%s + %s", left, right)
-		case OpSub:
-			return fmt.Sprintf("%s - %s", left, right)
-		case OpMul, OpDiv:
-			if n.left.needParenthesis() {
-				left = "(" + left + ")"
-			}
-			return fmt.Sprintf("%s %s %s", left, opNames[n.op], right)
-		case OpPow:
-			if n.left.needParenthesis() || n.left.op == OpMinus {
-				left = "(" + left + ")"
-			}
-			return fmt.Sprintf("%s %s %s", left, opNames[n.op], right)
-		case OpFact:
-			if n.left.needParenthesis() || n.left.op == OpMinus {
-				left = "(" + left + ")"
-			}
-			return fmt.Sprintf("%s!", left)
-		case OpSqrt:
-			return fmt.Sprintf("sqrt(%s)", left)
-		case OpMinus:
-			if n.left.needParenthesis() || n.left.op == OpFact {
-				left = "(" + left + ")"
-			}
-			return "-" + left
-		default:
-			return "<UNDEFINED>"
-		}
-	}
+	val         Rat
+	op          Op
 }
 
 func (n *Node) Depth() int64 {

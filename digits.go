@@ -12,6 +12,5 @@ func main() {
 		p = append(p, s.AllUnary()...)
 	}
 	p = uniq(p)
-	DEBUG = len(os.Args) > 5
 	p.Print(maxDepth > 0, min, max)
 }
