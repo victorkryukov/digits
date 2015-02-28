@@ -104,18 +104,6 @@ func (n *Node) String() string {
 	}
 }
 
-// String2 is for debugging purposes
-func (n *Node) String2() string {
-	left, right := "NIL", "NIL"
-	if n.left != nil {
-		left = n.left.String2()
-	}
-	if n.right != nil {
-		right = n.right.String2()
-	}
-	return fmt.Sprintf("<Node %d %s, left = %s, right = %s>", n.val, opNames[n.op], left, right)
-}
-
 func (n *Node) Depth() int64 {
 	if n.left == nil && n.right == nil {
 		return 0
@@ -610,13 +598,3 @@ func main() {
 	DEBUG = len(os.Args) > 5
 	p.Print(maxDepth > 0, min, max)
 }
-
-// func main() {
-// 	var printAll bool
-// 	if len(os.Args) > 4 {
-// 		maxDepth = atoi(os.Args[4])
-// 		printAll = true
-// 	}
-// 	formulas := generateFormulas(os.Args[1], atoi(os.Args[2]), atoi(os.Args[3]))
-// 	SolutionSlice(formulas).Print(printAll)
-// }
