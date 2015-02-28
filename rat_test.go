@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func rat(s string) Rat {
+func rat(s string) rational {
 	p := strings.Split(s, "/")
 	if len(p) > 2 {
 		log.Fatalf("Cannot convert %s to rational\n", s)
@@ -27,14 +27,14 @@ func rat(s string) Rat {
 	} else {
 		denom = 1
 	}
-	return Rat{n: int64(num), d: int64(denom)}
+	return rational{n: int64(num), d: int64(denom)}
 }
 
 type testCase struct {
 	a, op, b, r string
 }
 
-func TestRatOps(t *testing.T) {
+func TestrationalOps(t *testing.T) {
 	assert := assert.New(t)
 	cases := []testCase{
 		{"1/2", "+", "1/2", "1"},
@@ -116,7 +116,7 @@ func TestRatOps(t *testing.T) {
 	}
 }
 
-func TestRatErrors(t *testing.T) {
+func TestrationalErrors(t *testing.T) {
 	assert := assert.New(t)
 	cases := []struct{ a, op, b string }{
 		{"1/2", "!", ""},
@@ -154,7 +154,7 @@ func TestRatErrors(t *testing.T) {
 	}
 }
 
-func TestRatMisc(t *testing.T) {
+func TestrationalMisc(t *testing.T) {
 	assert := assert.New(t)
 
 	assert.True(rat("-1/2").Negative())

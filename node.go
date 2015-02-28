@@ -40,7 +40,7 @@ var opNames = map[Op]string{
 // right sub-node nil, which is checked by Node.valid().
 type Node struct {
 	left, right *Node
-	val         Rat
+	val         rational
 	op          Op
 }
 
@@ -65,13 +65,13 @@ func newNode(left *Node, op Op, right *Node) *Node {
 }
 
 // newValNode creates a new value Node from a rational.
-func newValNode(val Rat) *Node {
+func newValNode(val rational) *Node {
 	return &Node{val: val}
 }
 
 // newIntNode creates a new value Node from an integer.
 func newIntNode(val int64) *Node {
-	return &Node{val: Rat{n: val, d: 1}}
+	return &Node{val: rational{n: val, d: 1}}
 }
 
 // Depth returns distance of the deepest leaf to the root.
@@ -212,25 +212,25 @@ func (n *Node) Simplify() *Node {
 }
 
 // Eval returns the value of this node's expression
-func (n *Node) Eval() (Rat, error) {
+func (n *Node) Eval() (rational, error) {
 	if n.op == OpNull {
 		if n.left == nil && n.right == nil {
 			return n.val, nil
 		} else {
-			return BadRat, fmt.Errorf("Undefined operation")
+			return rational{}, fmt.Errorf("Undefined operation")
 		}
 	}
 	if n.op < OpFact {
 		if n.left == nil || n.right == nil {
-			return BadRat, fmt.Errorf("Not enough arguments for %s", opNames[n.op])
+			return rational{}, fmt.Errorf("Not enough arguments for %s", opNames[n.op])
 		}
 		left, err := n.left.Eval()
 		if err != nil {
-			return BadRat, err
+			return rational{}, err
 		}
 		right, err := n.right.Eval()
 		if err != nil {
-			return BadRat, err
+			return rational{}, err
 		}
 		switch n.op {
 		case OpAdd:
@@ -241,7 +241,7 @@ func (n *Node) Eval() (Rat, error) {
 			return left.Mul(right), nil
 		case OpDiv:
 			if right.Zero() {
-				return BadRat, fmt.Errorf("Division by 0")
+				return rational{}, fmt.Errorf("Division by 0")
 			}
 			return left.Div(right), nil
 		case OpPow:
@@ -249,14 +249,14 @@ func (n *Node) Eval() (Rat, error) {
 		}
 	} else {
 		if n.right != nil {
-			return BadRat, fmt.Errorf("Right operand for %s should be empty", opNames[n.op])
+			return rational{}, fmt.Errorf("Right operand for %s should be empty", opNames[n.op])
 		}
 		if n.left == nil {
-			return BadRat, fmt.Errorf("Left operand for %s should NOT be empty", opNames[n.op])
+			return rational{}, fmt.Errorf("Left operand for %s should NOT be empty", opNames[n.op])
 		}
 		left, err := n.left.Eval()
 		if err != nil {
-			return BadRat, err
+			return rational{}, err
 		}
 		switch n.op {
 		case OpFact:
@@ -268,5 +268,5 @@ func (n *Node) Eval() (Rat, error) {
 		}
 	}
 
-	return BadRat, fmt.Errorf("Unreachable state")
+	return rational{}, fmt.Errorf("Unreachable state")
 }

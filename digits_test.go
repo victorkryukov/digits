@@ -15,7 +15,7 @@ func TestNodeString(t *testing.T) {
 			left: &Node{
 				op: OpSqrt,
 				left: &Node{
-					val: Rat{9, 1},
+					val: rational{9, 1},
 				},
 			},
 		},

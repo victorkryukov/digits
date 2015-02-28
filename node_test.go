@@ -9,7 +9,7 @@ import (
 func TestNodeValid(t *testing.T) {
 	assert := assert.New(t)
 	assert.True(newIntNode(1).valid())
-	assert.True(newNode(newValNode(Rat{3, 4}), OpSub, newIntNode(2)).valid())
+	assert.True(newNode(newValNode(rational{3, 4}), OpSub, newIntNode(2)).valid())
 	n := &Node{left: newIntNode(1), right: newIntNode(2), op: OpMinus}
 	assert.False(n.valid())
 	n = &Node{left: nil, right: newIntNode(2), op: OpFact}
@@ -40,8 +40,8 @@ func TestNodeEqual(t *testing.T) {
 			assert.False(nodes[i].Equal(nodes[j]))
 		}
 	}
-	n5 := newNode(newValNode(Rat{3, 4}), OpAdd, newValNode(Rat{-1, 2}))
-	n6 := newNode(newValNode(Rat{6, 8}), OpAdd, newValNode(Rat{2, -4}))
+	n5 := newNode(newValNode(rational{3, 4}), OpAdd, newValNode(rational{-1, 2}))
+	n6 := newNode(newValNode(rational{6, 8}), OpAdd, newValNode(rational{2, -4}))
 	assert.True(n5.Equal(n5))
 	assert.True(n5.Equal(n6))
 	assert.True(n6.Equal(n6))

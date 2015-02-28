@@ -12,14 +12,14 @@ import (
 // where digits is the original digits string. We cannot use binary operator for s1, s2
 // if s1.end != s2.start
 type Solution struct {
-	val        Rat
+	val        rational
 	start, end int
 }
 
 var NoSolution Solution
 
 func init() {
-	NoSolution = Solution{val: BadRat, start: -1, end: -1}
+	NoSolution = Solution{val: rational{}, start: -1, end: -1}
 }
 
 // Global variables are bad for you health
@@ -56,7 +56,7 @@ func (s Solution) Add(v *Node) {
 // Apply an unary operator to this solution, if possible, and add to all solutions
 // found so far.
 func (s Solution) Unary(op Op) Solution {
-	if s.val.Zero() || (s.val.Equal(Rat{1, 1}) && op != OpMinus) {
+	if s.val.Zero() || (s.val.Equal(rational{1, 1}) && op != OpMinus) {
 		return s
 	}
 	var s1 Solution
@@ -64,7 +64,7 @@ func (s Solution) Unary(op Op) Solution {
 	case OpMinus:
 		s1 = Solution{val: s.val.Minus(), start: s.start, end: s.end}
 	case OpFact:
-		if s.val.Less(Rat{3, 1}) {
+		if s.val.Less(rational{3, 1}) {
 			return NoSolution
 		}
 		f, err := s.val.Fact()
@@ -175,7 +175,7 @@ func (s Solution) AllUnary() SolutionSlice {
 	if s.val.Zero() {
 		return SolutionSlice{s}
 	}
-	if s.val.Equal(Rat{1, 1}) || s.val.Equal(Rat{-1, 1}) {
+	if s.val.Equal(rational{1, 1}) || s.val.Equal(rational{-1, 1}) {
 		return SolutionSlice{s, Solution{s.val.Minus(), s.start, s.end}}
 	}
 	result := SolutionSlice{s}
@@ -238,7 +238,7 @@ func atos(a string, start, end int) Solution {
 	if err != nil {
 		log.Fatalf("Cannot convert %s to number\n", a)
 	}
-	s := Solution{val: Rat{int64(n), 1}, start: start, end: start + len(a)}
+	s := Solution{val: rational{int64(n), 1}, start: start, end: start + len(a)}
 	s.Add(nil)
 	return s
 }
@@ -255,7 +255,7 @@ func atoi(s string) int64 {
 func (p SolutionSlice) Print(all bool, min, max int64) {
 	p.Sort()
 	for _, f := range p {
-		if min <= max && !f.val.Integer() || (f.val.Less(Rat{min, 1}) || Rat{max, 1}.Less(f.val)) {
+		if min <= max && !f.val.Integer() || (f.val.Less(rational{min, 1}) || rational{max, 1}.Less(f.val)) {
 			continue
 		}
 		if all {
