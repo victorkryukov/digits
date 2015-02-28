@@ -34,7 +34,7 @@ type testCase struct {
 	a, op, b, r string
 }
 
-func TestrationalOps(t *testing.T) {
+func TestRationalOps(t *testing.T) {
 	assert := assert.New(t)
 	cases := []testCase{
 		{"1/2", "+", "1/2", "1"},
@@ -116,7 +116,7 @@ func TestrationalOps(t *testing.T) {
 	}
 }
 
-func TestrationalErrors(t *testing.T) {
+func TestRationalErrors(t *testing.T) {
 	assert := assert.New(t)
 	cases := []struct{ a, op, b string }{
 		{"1/2", "!", ""},
@@ -154,7 +154,7 @@ func TestrationalErrors(t *testing.T) {
 	}
 }
 
-func TestrationalMisc(t *testing.T) {
+func TestRationalMisc(t *testing.T) {
 	assert := assert.New(t)
 
 	assert.True(rat("-1/2").Negative())
