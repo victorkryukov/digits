@@ -44,7 +44,7 @@ type Node struct {
 	op          Op
 }
 
-// valid returns true for correct nodes.
+// valid returns true for correct nodes. It does NOT check the subnodes recursively.
 func (n *Node) valid() bool {
 	if n.op == OpNull {
 		return n.left == nil && n.right == nil
@@ -70,8 +70,9 @@ func newIntNode(val int64) *Node {
 	return &Node{val: Rat{n: val, d: 1}}
 }
 
+// Depth returns distance of the deepest leaf to the root.
 func (n *Node) Depth() int64 {
-	if n.left == nil && n.right == nil {
+	if n.op == OpNull {
 		return 0
 	}
 	depth := n.left.Depth()
