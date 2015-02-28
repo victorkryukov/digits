@@ -37,11 +37,37 @@ var opNames = map[Op]string{
 
 // Node represents a formula parse tree, storing value (for a leaf) or
 // operand with left and right sub-nodes. Nodes with unary operators will have their
-// right sub-node nil.
+// right sub-node nil, which is checked by Node.valid().
 type Node struct {
 	left, right *Node
 	val         Rat
 	op          Op
+}
+
+// valid returns true for correct nodes.
+func (n *Node) valid() bool {
+	if n.op == OpNull {
+		return n.left == nil && n.right == nil
+	} else if n.op <= OpPow {
+		return n.left != nil && n.right != nil
+	} else {
+		return n.left != nil && n.right == nil
+	}
+}
+
+// newNode creates a new formula Node.
+func newNode(left *Node, op Op, right *Node) *Node {
+	return &Node{left: left, op: op, right: right}
+}
+
+// newValNode creates a new value Node from a rational.
+func newValNode(val Rat) *Node {
+	return &Node{val: val}
+}
+
+// newIntNode creates a new value Node from an integer.
+func newIntNode(val int64) *Node {
+	return &Node{val: Rat{n: val, d: 1}}
 }
 
 func (n *Node) Depth() int64 {
