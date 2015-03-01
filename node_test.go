@@ -73,4 +73,15 @@ func TestNodeParseString(t *testing.T) {
 				newNode(newValNode(rational{3, 4}), OpFact, nil),
 				OpPow,
 				newNode(newValNode(rational{-5, 6}), OpMinus, nil)))))
+	for _, s := range []string{
+		"",
+		"+-",
+		"+",
+		"+ 1",
+		"+ 1 --",
+		"x 1 2",
+	} {
+		_, err := ParseString(s)
+		assert.Error(err, "Parsing '%s'", s)
+	}
 }
