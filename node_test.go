@@ -85,3 +85,38 @@ func TestNodeParsePolish(t *testing.T) {
 		assert.Error(err, "Parsing '%s'", s)
 	}
 }
+
+func TestNodeEval(t *testing.T) {
+	assert := assert.New(t)
+	for _, tc := range []struct{ s, v string }{
+		{"+ 1/2 1/3", "5/6"},
+		{"- 1/2 1/3", "1/6"},
+		{"- 1/2 -1/3", "5/6"},
+		{"- 1/2 -- 1/3", "5/6"},
+		{"* -1/2 -1/3", "1/6"},
+		{"sqrt 4", "2"},
+		{"! 5", "120"},
+		{"/ 1 100", "1/100"},
+		{"^ 2 4", "16"},
+		{"^ 4 1/2", "2"},
+	} {
+		n, err := ParsePolish(tc.s)
+		assert.NoError(err)
+		v, err := n.Eval()
+		assert.NoError(err)
+		assert.Equal(v, newRational(tc.v))
+	}
+
+	n1 := &Node{left: nil, op: OpAdd, right: newIntNode(5)}
+	n2 := &Node{left: n1, op: OpFact, right: nil}
+	n3 := &Node{left: n1, op: OpAdd, right: newIntNode(6)}
+	n4 := &Node{left: newIntNode(6), op: OpAdd, right: n2}
+	n5, _ := ParsePolish("/ 1 0")
+	n6, _ := ParsePolish("^ 4 1/3")
+	n7, _ := ParsePolish("! -2")
+	n8, _ := ParsePolish("sqrt -2")
+	for _, n := range []*Node{n1, n2, n3, n4, n5, n6, n7, n8} {
+		_, err := n.Eval()
+		assert.Error(err)
+	}
+}

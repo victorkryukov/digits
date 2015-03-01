@@ -191,8 +191,7 @@ func (n *Node) Eval() (rational, error) {
 	}
 	if n.op == OpNull {
 		return n.val, nil
-	}
-	if n.op.unary() {
+	} else if n.op.binary() {
 		left, err := n.left.Eval()
 		if err != nil {
 			return rational{}, err
