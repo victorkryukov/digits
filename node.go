@@ -47,6 +47,11 @@ func (op Op) binary() bool {
 	return op >= OpAdd && op <= OpPow
 }
 
+// String returns string representation for op
+func (op Op) String() string {
+	return opNames[op]
+}
+
 // Node represents a formula parse tree, storing value (for a leaf) or
 // operand with left and right sub-nodes. Nodes with unary operators will have their
 // right sub-node nil, which is checked by Node.valid().
@@ -78,7 +83,7 @@ func newNode(left *Node, op Op, right *Node) *Node {
 
 // newValNode creates a new value Node from a rational.
 func newValNode(val rational) *Node {
-	return &Node{val: val}
+	return &Node{val: val.Normalize()}
 }
 
 // newIntNode creates a new value Node from an integer.
@@ -86,18 +91,40 @@ func newIntNode(val int64) *Node {
 	return &Node{val: rational{n: val, d: 1}}
 }
 
-// parseString parses a node from a string, and returns an error if the input is invalid.
+// FromPolish parses a node from a string, and returns an error if the input is invalid.
 // The input should be in Polish notation, with operands possibly separated by one or several spaces,
 // and rational numbers writen as a/b without any spaces around '/'. To avoid ambiguity,
 // unary minus should be encoded as --.
 // It reads as much as possible. See tests for some examples.
-func ParsePolish(s string) (*Node, error) {
+func FromPolish(s string) (*Node, error) {
 	s = strings.TrimSpace(s)
 	nd, _, err := parseNodeFromString(s)
 	if err != nil {
-		return nil, fmt.Errorf("Cannot parse '%s': %s", s, err)
+		return nil, fmt.Errorf("cannot parse '%s': %s", s, err)
 	}
 	return nd, nil
+}
+
+// ToPolish is an opposite of FromPolish: it returns a node writen in the polish notation.
+func (n *Node) ToPolish() string {
+	if !n.valid() {
+		return fmt.Sprintf("invalid formula: '%s'", n)
+	}
+	if n.op == OpNull {
+		return n.val.String()
+	} else {
+		var s string
+		if n.op != OpMinus {
+			s = n.op.String()
+		} else {
+			s = "--"
+		}
+		s += " " + n.left.ToPolish()
+		if n.op.binary() {
+			s += " " + n.right.ToPolish()
+		}
+		return s
+	}
 }
 
 // parseNodeFromString does heavy lifting for parseString. It parses as much as possible and

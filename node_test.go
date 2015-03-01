@@ -48,17 +48,17 @@ func TestNodeEqual(t *testing.T) {
 }
 
 func parsedEqual(s string, n *Node) bool {
-	n1, err := ParsePolish(s)
+	n1, err := FromPolish(s)
 	return err == nil && n1.Equal(n)
 }
 
 // func TestNodeParse1(t *testing.T) {
 // 	const s = "/ sqrt 2 + ! 3/4 -- -5/6"
-// 	n, err := ParsePolish(s)
+// 	n, err := FromPolish(s)
 // 	fmt.Printf("s = %s\nn = %s\nerr = %s\n", s, n, err)
 // }
 
-func TestNodeParsePolish(t *testing.T) {
+func TestNodeFromPolish(t *testing.T) {
 	assert := assert.New(t)
 	assert.True(parsedEqual("* + 1/2 -3/4 - 5/6 7/8",
 		newNode(
@@ -81,8 +81,61 @@ func TestNodeParsePolish(t *testing.T) {
 		"+ 1 --",
 		"x 1 2",
 	} {
-		_, err := ParsePolish(s)
+		_, err := FromPolish(s)
 		assert.Error(err, "Parsing '%s'", s)
+	}
+}
+
+// generateAllNodes generate all nodes up to level maxDepth where nominator and
+// denominator of the leafs are in [-intRange..intRange].
+func generateAllNodes(maxDepth, intRange int) [][]*Node {
+	nodes := make([][]*Node, maxDepth)
+	// Generating 0-level nodes
+	for i := -intRange; i <= intRange; i++ {
+		for j := -intRange; j <= intRange; j++ {
+			nodes[0] = append(nodes[0], newValNode(rational{int64(i), int64(j)}))
+		}
+	}
+	for level := 1; level < maxDepth; level++ {
+		// Generating all nodes of depth level
+		for op := OpAdd; op <= OpMinus; op++ {
+			for _, left := range nodes[level-1] {
+				if op.unary() {
+					nodes[level] = append(nodes[level], newNode(left, op, nil))
+				} else {
+					for rightLevel := 0; rightLevel <= level-1; rightLevel++ {
+						for _, right := range nodes[rightLevel] {
+							nodes[level] = append(nodes[level], newNode(left, op, right))
+						}
+					}
+				}
+			}
+		}
+		// Now we also need to add all nodes with binary op where right's level is level-1
+		// and left's level is smaller
+		for op := OpAdd; op <= OpPow; op++ {
+			for _, right := range nodes[level-1] {
+				for leftLevel := 0; leftLevel <= level-2; leftLevel++ {
+					for _, left := range nodes[leftLevel] {
+						nodes[level] = append(nodes[level], newNode(left, op, right))
+					}
+				}
+			}
+		}
+	}
+	return nodes
+}
+
+func TestToPolish(t *testing.T) {
+	assert := assert.New(t)
+	nodes := generateAllNodes(2, 4)
+	for level := range nodes {
+		for _, node := range nodes[level] {
+			p := node.ToPolish()
+			n, err := FromPolish(p)
+			assert.NoError(err, "parsing %s", p)
+			assert.True(n.Equal(node), "parsing from '%s' should equal '%s'", p, node)
+		}
 	}
 }
 
@@ -100,7 +153,7 @@ func TestNodeEval(t *testing.T) {
 		{"^ 2 4", "16"},
 		{"^ 4 1/2", "2"},
 	} {
-		n, err := ParsePolish(tc.s)
+		n, err := FromPolish(tc.s)
 		assert.NoError(err)
 		v, err := n.Eval()
 		assert.NoError(err)
@@ -111,10 +164,10 @@ func TestNodeEval(t *testing.T) {
 	n2 := &Node{left: n1, op: OpFact, right: nil}
 	n3 := &Node{left: n1, op: OpAdd, right: newIntNode(6)}
 	n4 := &Node{left: newIntNode(6), op: OpAdd, right: n2}
-	n5, _ := ParsePolish("/ 1 0")
-	n6, _ := ParsePolish("^ 4 1/3")
-	n7, _ := ParsePolish("! -2")
-	n8, _ := ParsePolish("sqrt -2")
+	n5, _ := FromPolish("/ 1 0")
+	n6, _ := FromPolish("^ 4 1/3")
+	n7, _ := FromPolish("! -2")
+	n8, _ := FromPolish("sqrt -2")
 	for _, n := range []*Node{n1, n2, n3, n4, n5, n6, n7, n8} {
 		_, err := n.Eval()
 		assert.Error(err)
