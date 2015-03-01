@@ -91,7 +91,7 @@ func newIntNode(val int64) *Node {
 // and rational numbers writen as a/b without any spaces around '/'. To avoid ambiguity,
 // unary minus should be encoded as --.
 // It reads as much as possible. See tests for some examples.
-func ParseString(s string) (*Node, error) {
+func ParsePolish(s string) (*Node, error) {
 	s = strings.TrimSpace(s)
 	nd, _, err := parseNodeFromString(s)
 	if err != nil {

@@ -48,17 +48,17 @@ func TestNodeEqual(t *testing.T) {
 }
 
 func parsedEqual(s string, n *Node) bool {
-	n1, err := ParseString(s)
+	n1, err := ParsePolish(s)
 	return err == nil && n1.Equal(n)
 }
 
 // func TestNodeParse1(t *testing.T) {
 // 	const s = "/ sqrt 2 + ! 3/4 -- -5/6"
-// 	n, err := ParseString(s)
+// 	n, err := ParsePolish(s)
 // 	fmt.Printf("s = %s\nn = %s\nerr = %s\n", s, n, err)
 // }
 
-func TestNodeParseString(t *testing.T) {
+func TestNodeParsePolish(t *testing.T) {
 	assert := assert.New(t)
 	assert.True(parsedEqual("* + 1/2 -3/4 - 5/6 7/8",
 		newNode(
@@ -81,7 +81,7 @@ func TestNodeParseString(t *testing.T) {
 		"+ 1 --",
 		"x 1 2",
 	} {
-		_, err := ParseString(s)
+		_, err := ParsePolish(s)
 		assert.Error(err, "Parsing '%s'", s)
 	}
 }
