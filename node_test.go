@@ -126,11 +126,21 @@ func generateAllNodes(maxDepth, intRange int) [][]*Node {
 	return nodes
 }
 
+var allNodes [][]*Node
+
+const (
+	maxNodeDepth = 3
+	intRange     = 1
+)
+
+func init() {
+	allNodes = generateAllNodes(maxNodeDepth, intRange)
+}
+
 func TestToPolish(t *testing.T) {
 	assert := assert.New(t)
-	nodes := generateAllNodes(2, 4)
-	for level := range nodes {
-		for _, node := range nodes[level] {
+	for level := range allNodes {
+		for _, node := range allNodes[level] {
 			p := node.ToPolish()
 			n, err := FromPolish(p)
 			assert.NoError(err, "parsing %s", p)
