@@ -1,34 +1,10 @@
 package main
 
 import (
-	"log"
-	"strconv"
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
-
-func rat(s string) rational {
-	p := strings.Split(s, "/")
-	if len(p) > 2 {
-		log.Fatalf("Cannot convert %s to rational\n", s)
-	}
-	num, err := strconv.Atoi(p[0])
-	if err != nil {
-		log.Fatalf("Cannot convert %s to number: %s\n", p[0], err)
-	}
-	var denom int
-	if len(p) == 2 {
-		denom, err = strconv.Atoi(p[1])
-		if err != nil {
-			log.Fatalf("Cannot convert %s to number: %s\n", p[1], err)
-		}
-	} else {
-		denom = 1
-	}
-	return rational{n: int64(num), d: int64(denom)}
-}
 
 type testCase struct {
 	a, op, b, r string
@@ -86,32 +62,32 @@ func TestRationalOps(t *testing.T) {
 	for _, tc := range cases {
 		switch tc.op {
 		case "+":
-			r := rat(tc.a).Add(rat(tc.b))
-			assert.Equal(rat(tc.r), r, "%s %s %s <> %s (got %s)", rat(tc.a), tc.op, rat(tc.b), rat(tc.r), r)
+			r := newRational(tc.a).Add(newRational(tc.b))
+			assert.Equal(newRational(tc.r), r, "%s %s %s <> %s (got %s)", newRational(tc.a), tc.op, newRational(tc.b), newRational(tc.r), r)
 		case "-":
-			r := rat(tc.a).Sub(rat(tc.b))
-			assert.Equal(rat(tc.r), r, "%s %s %s <> %s (got %s) ", rat(tc.a), tc.op, rat(tc.b), rat(tc.r), r)
+			r := newRational(tc.a).Sub(newRational(tc.b))
+			assert.Equal(newRational(tc.r), r, "%s %s %s <> %s (got %s) ", newRational(tc.a), tc.op, newRational(tc.b), newRational(tc.r), r)
 		case "/":
-			r := rat(tc.a).Div(rat(tc.b))
-			assert.Equal(rat(tc.r), r, "%s %s %s <> %s (got %s) ", rat(tc.a), tc.op, rat(tc.b), rat(tc.r), r)
+			r := newRational(tc.a).Div(newRational(tc.b))
+			assert.Equal(newRational(tc.r), r, "%s %s %s <> %s (got %s) ", newRational(tc.a), tc.op, newRational(tc.b), newRational(tc.r), r)
 		case "*":
-			r := rat(tc.a).Mul(rat(tc.b))
-			assert.Equal(rat(tc.r), r, "%s %s %s <> %s (got %s) ", rat(tc.a), tc.op, rat(tc.b), rat(tc.r), r)
+			r := newRational(tc.a).Mul(newRational(tc.b))
+			assert.Equal(newRational(tc.r), r, "%s %s %s <> %s (got %s) ", newRational(tc.a), tc.op, newRational(tc.b), newRational(tc.r), r)
 		case "^":
-			r, err := rat(tc.a).Pow(rat(tc.b))
+			r, err := newRational(tc.a).Pow(newRational(tc.b))
 			assert.NoError(err)
-			assert.Equal(rat(tc.r), r, "%s %s %s <> %s (got %s)", rat(tc.a), tc.op, rat(tc.b), rat(tc.r), r)
+			assert.Equal(newRational(tc.r), r, "%s %s %s <> %s (got %s)", newRational(tc.a), tc.op, newRational(tc.b), newRational(tc.r), r)
 		case "!":
-			r, err := rat(tc.a).Fact()
+			r, err := newRational(tc.a).Fact()
 			assert.NoError(err)
-			assert.Equal(rat(tc.r), r, "%s! <> %s (got %s)", rat(tc.a), rat(tc.r), r)
+			assert.Equal(newRational(tc.r), r, "%s! <> %s (got %s)", newRational(tc.a), newRational(tc.r), r)
 		case "--":
-			r := rat(tc.a).Minus()
-			assert.Equal(rat(tc.r), r, "-%s <> %s (got %s)", rat(tc.a), rat(tc.r), r)
+			r := newRational(tc.a).Minus()
+			assert.Equal(newRational(tc.r), r, "-%s <> %s (got %s)", newRational(tc.a), newRational(tc.r), r)
 		case "sqrt":
-			r, err := rat(tc.a).Sqrt()
+			r, err := newRational(tc.a).Sqrt()
 			assert.NoError(err)
-			assert.Equal(rat(tc.r), r, "sqrt(%s) != %s (got %s)", rat(tc.a), rat(tc.r), r)
+			assert.Equal(newRational(tc.r), r, "sqrt(%s) != %s (got %s)", newRational(tc.a), newRational(tc.r), r)
 		}
 	}
 }
@@ -142,14 +118,14 @@ func TestRationalErrors(t *testing.T) {
 	for _, tc := range cases {
 		switch tc.op {
 		case "!":
-			_, err := rat(tc.a).Fact()
-			assert.Error(err, "%s!", rat(tc.a))
+			_, err := newRational(tc.a).Fact()
+			assert.Error(err, "%s!", newRational(tc.a))
 		case "^":
-			_, err := rat(tc.a).Pow(rat(tc.b))
-			assert.Error(err, "%s ^ %s", rat(tc.a), rat(tc.b))
+			_, err := newRational(tc.a).Pow(newRational(tc.b))
+			assert.Error(err, "%s ^ %s", newRational(tc.a), newRational(tc.b))
 		case "sqrt":
-			_, err := rat(tc.a).Sqrt()
-			assert.Error(err, "sqrt(%s)", rat(tc.a))
+			_, err := newRational(tc.a).Sqrt()
+			assert.Error(err, "sqrt(%s)", newRational(tc.a))
 		}
 	}
 }
@@ -157,32 +133,32 @@ func TestRationalErrors(t *testing.T) {
 func TestRationalMisc(t *testing.T) {
 	assert := assert.New(t)
 
-	assert.True(rat("-1/2").Negative())
-	assert.True(rat("1/-2").Negative())
-	assert.False(rat("0").Negative())
-	assert.False(rat("2/1").Negative())
+	assert.True(newRational("-1/2").Negative())
+	assert.True(newRational("1/-2").Negative())
+	assert.False(newRational("0").Negative())
+	assert.False(newRational("2/1").Negative())
 
-	assert.True(rat("1/3").Less(rat("1/2")))
-	assert.False(rat("1/3").Less(rat("1/-2")))
-	assert.False(rat("-1/3").Less(rat("1/-2")))
-	assert.False(rat("1/3").Less(rat("-2")))
+	assert.True(newRational("1/3").Less(newRational("1/2")))
+	assert.False(newRational("1/3").Less(newRational("1/-2")))
+	assert.False(newRational("-1/3").Less(newRational("1/-2")))
+	assert.False(newRational("1/3").Less(newRational("-2")))
 
-	assert.True(rat("9").Integer())
-	assert.True(rat("-9/3").Integer())
-	assert.False(rat("1/2").Integer())
+	assert.True(newRational("9").Integer())
+	assert.True(newRational("-9/3").Integer())
+	assert.False(newRational("1/2").Integer())
 
-	assert.True(rat("0/100").Zero())
-	assert.False(rat("1/200").Zero())
+	assert.True(newRational("0/100").Zero())
+	assert.False(newRational("1/200").Zero())
 
-	assert.True(rat("-2").Even())
-	assert.True(rat("2").Even())
-	assert.True(rat("0").Even())
-	assert.False(rat("-1").Even())
-	assert.False(rat("1").Even())
-	assert.False(rat("4/8").Even())
-	assert.False(rat("-4/8").Even())
+	assert.True(newRational("-2").Even())
+	assert.True(newRational("2").Even())
+	assert.True(newRational("0").Even())
+	assert.False(newRational("-1").Even())
+	assert.False(newRational("1").Even())
+	assert.False(newRational("4/8").Even())
+	assert.False(newRational("-4/8").Even())
 
-	assert.True(rat("3/9").Equal(rat("1/3")))
-	assert.True(rat("-3/6").Equal(rat("1/-2")))
-	assert.False(rat("-3/6").Equal(rat("-2")))
+	assert.True(newRational("3/9").Equal(newRational("1/3")))
+	assert.True(newRational("-3/6").Equal(newRational("1/-2")))
+	assert.False(newRational("-3/6").Equal(newRational("-2")))
 }

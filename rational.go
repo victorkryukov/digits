@@ -2,8 +2,10 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"math"
 	"strconv"
+	"strings"
 )
 
 // Lookup tables for fast factorial and integer square root
@@ -109,6 +111,27 @@ func pow(a, b int64) int64 {
 // rational stores normalized rational numbers. Integers are stored as {n, 1}
 type rational struct {
 	n, d int64
+}
+
+func newRational(s string) rational {
+	p := strings.Split(s, "/")
+	if len(p) > 2 {
+		log.Fatalf("Cannot convert %s to rational\n", s)
+	}
+	num, err := strconv.Atoi(p[0])
+	if err != nil {
+		log.Fatalf("Cannot convert %s to number: %s\n", p[0], err)
+	}
+	var denom int
+	if len(p) == 2 {
+		denom, err = strconv.Atoi(p[1])
+		if err != nil {
+			log.Fatalf("Cannot convert %s to number: %s\n", p[1], err)
+		}
+	} else {
+		denom = 1
+	}
+	return rational{n: int64(num), d: int64(denom)}
 }
 
 func (r rational) String() string {
