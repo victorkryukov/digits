@@ -37,6 +37,16 @@ var opNames = map[Op]string{
 	OpMinus: "-",
 }
 
+// unary returns true for unary operators
+func (op Op) unary() bool {
+	return op >= OpFact
+}
+
+// binary returns true for binary operators
+func (op Op) binary() bool {
+	return op >= OpAdd && op <= OpPow
+}
+
 // Node represents a formula parse tree, storing value (for a leaf) or
 // operand with left and right sub-nodes. Nodes with unary operators will have their
 // right sub-node nil, which is checked by Node.valid().
@@ -129,7 +139,7 @@ func parseNodeFromString(s string) (*Node, string, error) {
 	if err != nil {
 		return nil, s1, err
 	}
-	if op > OpPow {
+	if op.unary() {
 		return newNode(n1, op, nil), s1, nil
 	} else {
 		n2, s2, err := parseNodeFromString(s1)
@@ -176,17 +186,13 @@ func (n *Node) Equal(n1 *Node) bool {
 // Eval evaluates formula value, and raises an error if the result is invalid
 // or cannot be represented by a rational.
 func (n *Node) Eval() (rational, error) {
-	if n.op == OpNull {
-		if n.left == nil && n.right == nil {
-			return n.val, nil
-		} else {
-			return rational{}, fmt.Errorf("Undefined operation")
-		}
+	if !n.valid() {
+		return rational{}, fmt.Errorf("invalid formula %s", n)
 	}
-	if n.op < OpFact {
-		if n.left == nil || n.right == nil {
-			return rational{}, fmt.Errorf("Not enough arguments for %s", opNames[n.op])
-		}
+	if n.op == OpNull {
+		return n.val, nil
+	}
+	if n.op.unary() {
 		left, err := n.left.Eval()
 		if err != nil {
 			return rational{}, err
@@ -204,19 +210,13 @@ func (n *Node) Eval() (rational, error) {
 			return left.Mul(right), nil
 		case OpDiv:
 			if right.Zero() {
-				return rational{}, fmt.Errorf("Division by 0")
+				return rational{}, fmt.Errorf("division by 0")
 			}
 			return left.Div(right), nil
 		case OpPow:
 			return left.Pow(right)
 		}
 	} else {
-		if n.right != nil {
-			return rational{}, fmt.Errorf("Right operand for %s should be empty", opNames[n.op])
-		}
-		if n.left == nil {
-			return rational{}, fmt.Errorf("Left operand for %s should NOT be empty", opNames[n.op])
-		}
 		left, err := n.left.Eval()
 		if err != nil {
 			return rational{}, err
@@ -230,7 +230,6 @@ func (n *Node) Eval() (rational, error) {
 			return left.Minus(), nil
 		}
 	}
-
 	return rational{}, fmt.Errorf("Unreachable state")
 }
 
