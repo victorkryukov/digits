@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 	"log"
+	"regexp"
+	"strings"
 )
 
 type Op byte // Operators
@@ -74,6 +76,80 @@ func newIntNode(val int64) *Node {
 	return &Node{val: rational{n: val, d: 1}}
 }
 
+// parseString parses a node from a string, and returns an error if the input is invalid.
+// The input should be in Polish notation, with operands possibly separated by one or several spaces,
+// and rational numbers writen as a/b without any spaces around '/'. To avoid ambiguity,
+// unary minus should be encoded as --.
+// It reads as much as possible. See tests for some examples.
+func ParseString(s string) (*Node, error) {
+	s = strings.TrimSpace(s)
+	nd, _, err := parseNodeFromString(s)
+	if err != nil {
+		return nil, fmt.Errorf("Cannot parse '%s': %s", s, err)
+	}
+	return nd, nil
+}
+
+// parseNodeFromString does heavy lifting for parseString. It parses as much as possible and
+// returns the node parsed and how far into the string it read.
+func parseNodeFromString(s string) (*Node, int, error) {
+	// Try to parse rational first
+	if ind := ratRx.FindStringIndex(s); ind != nil {
+		return newValNode(newRational(strings.TrimSpace(s[:ind[1]]))), ind[1], nil
+	}
+	var op Op
+	var start int
+	for ; start < len(s) && s[start] == ' '; start++ {
+	}
+	fmt.Printf("s = '%s' start = %d\n", s, start)
+	if start == len(s) {
+		return nil, 0, fmt.Errorf("empty string")
+	}
+	if strings.HasPrefix(s[start:], "sqrt") {
+		op = OpSqrt
+		start += 4
+	} else if strings.HasPrefix(s[start:], "--") {
+		op = OpMinus
+		start += 2
+	} else {
+		for k := range opNames {
+			if opNames[k] == s[start:start+1] {
+				op = k
+				if op == OpMinus {
+					op = OpSub
+				}
+			}
+		}
+		start += 1
+		if op == OpNull {
+			return nil, 1, fmt.Errorf("unrecognized operator '%s'", s[:1])
+		}
+	}
+	if start == len(s) {
+		return nil, len(s), fmt.Errorf("first operand missing")
+	}
+	n1, e1, err := parseNodeFromString(s[start:])
+	if err != nil {
+		return nil, start + e1, err
+	}
+	if op > OpPow {
+		return newNode(n1, op, nil), start + e1, nil
+	} else {
+		n2, e2, err := parseNodeFromString(s[start+e1:])
+		if err != nil {
+			return nil, start + e1 + e2, fmt.Errorf("second operand missing")
+		} else {
+			return newNode(n1, op, n2), start + e1 + e2, nil
+		}
+	}
+}
+
+var ratRx *regexp.Regexp // Regular expression for a rational number
+
+func init() {
+	ratRx = regexp.MustCompile("^\\s*-?[0-9]+(/[0-9]+)")
+}
+
 // Depth returns distance of the deepest leaf to the root.
 func (n *Node) Depth() int64 {
 	if n.op == OpNull {
@@ -98,6 +174,67 @@ func (n *Node) Equal(n1 *Node) bool {
 	} else {
 		return n.val.Equal(n1.val)
 	}
+}
+
+// Eval evaluates formula value, and raises an error if the result is invalid
+// or cannot be represented by a rational.
+func (n *Node) Eval() (rational, error) {
+	if n.op == OpNull {
+		if n.left == nil && n.right == nil {
+			return n.val, nil
+		} else {
+			return rational{}, fmt.Errorf("Undefined operation")
+		}
+	}
+	if n.op < OpFact {
+		if n.left == nil || n.right == nil {
+			return rational{}, fmt.Errorf("Not enough arguments for %s", opNames[n.op])
+		}
+		left, err := n.left.Eval()
+		if err != nil {
+			return rational{}, err
+		}
+		right, err := n.right.Eval()
+		if err != nil {
+			return rational{}, err
+		}
+		switch n.op {
+		case OpAdd:
+			return left.Add(right), nil
+		case OpSub:
+			return left.Sub(right), nil
+		case OpMul:
+			return left.Mul(right), nil
+		case OpDiv:
+			if right.Zero() {
+				return rational{}, fmt.Errorf("Division by 0")
+			}
+			return left.Div(right), nil
+		case OpPow:
+			return left.Pow(right)
+		}
+	} else {
+		if n.right != nil {
+			return rational{}, fmt.Errorf("Right operand for %s should be empty", opNames[n.op])
+		}
+		if n.left == nil {
+			return rational{}, fmt.Errorf("Left operand for %s should NOT be empty", opNames[n.op])
+		}
+		left, err := n.left.Eval()
+		if err != nil {
+			return rational{}, err
+		}
+		switch n.op {
+		case OpFact:
+			return left.Fact()
+		case OpSqrt:
+			return left.Sqrt()
+		case OpMinus:
+			return left.Minus(), nil
+		}
+	}
+
+	return rational{}, fmt.Errorf("Unreachable state")
 }
 
 // transformDuo transorms all expressions of the form (op1 a) op2 (op3 b) into op4 (a op5 b),
@@ -209,64 +346,4 @@ func (n *Node) Simplify() *Node {
 	} else {
 		return n
 	}
-}
-
-// Eval returns the value of this node's expression
-func (n *Node) Eval() (rational, error) {
-	if n.op == OpNull {
-		if n.left == nil && n.right == nil {
-			return n.val, nil
-		} else {
-			return rational{}, fmt.Errorf("Undefined operation")
-		}
-	}
-	if n.op < OpFact {
-		if n.left == nil || n.right == nil {
-			return rational{}, fmt.Errorf("Not enough arguments for %s", opNames[n.op])
-		}
-		left, err := n.left.Eval()
-		if err != nil {
-			return rational{}, err
-		}
-		right, err := n.right.Eval()
-		if err != nil {
-			return rational{}, err
-		}
-		switch n.op {
-		case OpAdd:
-			return left.Add(right), nil
-		case OpSub:
-			return left.Sub(right), nil
-		case OpMul:
-			return left.Mul(right), nil
-		case OpDiv:
-			if right.Zero() {
-				return rational{}, fmt.Errorf("Division by 0")
-			}
-			return left.Div(right), nil
-		case OpPow:
-			return left.Pow(right)
-		}
-	} else {
-		if n.right != nil {
-			return rational{}, fmt.Errorf("Right operand for %s should be empty", opNames[n.op])
-		}
-		if n.left == nil {
-			return rational{}, fmt.Errorf("Left operand for %s should NOT be empty", opNames[n.op])
-		}
-		left, err := n.left.Eval()
-		if err != nil {
-			return rational{}, err
-		}
-		switch n.op {
-		case OpFact:
-			return left.Fact()
-		case OpSqrt:
-			return left.Sqrt()
-		case OpMinus:
-			return left.Minus(), nil
-		}
-	}
-
-	return rational{}, fmt.Errorf("Unreachable state")
 }
