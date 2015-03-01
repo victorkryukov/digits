@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"regexp"
 	"strings"
 )
@@ -353,17 +352,6 @@ func (n *Node) Simplify() *Node {
 		}
 	}
 	if n1 != nil && n1 != n {
-		e, err := n.Eval()
-		if err != nil {
-			log.Fatalf("Error evaluating %s: %s\n", n, err)
-		}
-		e1, err1 := n1.Eval()
-		if err != nil {
-			log.Fatalf("Error evaluating %s: %s\n", n1, err1)
-		}
-		if e != e1 {
-			log.Fatalf("Before: n = %s\t[%d]\nAfter: n = %s\t[%d]\n", n, e, n1, e1)
-		}
 		return n1.Simplify()
 	} else {
 		return n
