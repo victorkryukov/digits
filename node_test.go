@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -53,11 +52,11 @@ func parsedEqual(s string, n *Node) bool {
 	return err == nil && n1.Equal(n)
 }
 
-func TestNodeParse1(t *testing.T) {
-	const s = "/ sqrt 2 + ! 3/4 - -5/6"
-	n, err := ParseString(s)
-	fmt.Printf("s = %s\nn = %s\nerr = %s\n", s, n, err)
-}
+// func TestNodeParse1(t *testing.T) {
+// 	const s = "/ sqrt 2 + ! 3/4 -- -5/6"
+// 	n, err := ParseString(s)
+// 	fmt.Printf("s = %s\nn = %s\nerr = %s\n", s, n, err)
+// }
 
 func TestNodeParseString(t *testing.T) {
 	assert := assert.New(t)
@@ -66,12 +65,12 @@ func TestNodeParseString(t *testing.T) {
 			newNode(newValNode(rational{1, 2}), OpAdd, newValNode(rational{-3, 4})),
 			OpMul,
 			newNode(newValNode(rational{5, 6}), OpSub, newValNode(rational{7, 8})))))
-	assert.True(parsedEqual("/ sqrt 2 + ! 3/4 - -5/6",
+	assert.True(parsedEqual("/ sqrt 2 ^ ! 3/4 -- -5/6",
 		newNode(
 			newNode(newIntNode(2), OpSqrt, nil),
 			OpDiv,
 			newNode(
 				newNode(newValNode(rational{3, 4}), OpFact, nil),
-				OpAdd,
+				OpPow,
 				newNode(newValNode(rational{-5, 6}), OpMinus, nil)))))
 }

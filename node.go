@@ -91,55 +91,52 @@ func ParseString(s string) (*Node, error) {
 }
 
 // parseNodeFromString does heavy lifting for parseString. It parses as much as possible and
-// returns the node parsed and how far into the string it read.
-func parseNodeFromString(s string) (*Node, int, error) {
+// returns the node parsed and the remainder of the string.
+func parseNodeFromString(s string) (*Node, string, error) {
+	s = strings.TrimSpace(s)
 	// Try to parse rational first
 	if ind := ratRx.FindStringIndex(s); ind != nil {
-		return newValNode(newRational(strings.TrimSpace(s[:ind[1]]))), ind[1], nil
+		return newValNode(newRational(strings.TrimSpace(s[:ind[1]]))), s[ind[1]:], nil
+	}
+	if s == "" {
+		return nil, "", fmt.Errorf("empty string")
 	}
 	var op Op
-	var start int
-	for ; start < len(s) && s[start] == ' '; start++ {
-	}
-	fmt.Printf("s = '%s' start = %d\n", s, start)
-	if start == len(s) {
-		return nil, 0, fmt.Errorf("empty string")
-	}
-	if strings.HasPrefix(s[start:], "sqrt") {
+	if strings.HasPrefix(s, "sqrt") {
 		op = OpSqrt
-		start += 4
-	} else if strings.HasPrefix(s[start:], "--") {
+		s = s[4:]
+	} else if strings.HasPrefix(s, "--") {
 		op = OpMinus
-		start += 2
+		s = s[2:]
 	} else {
 		for k := range opNames {
-			if opNames[k] == s[start:start+1] {
+			if opNames[k] == s[:1] {
 				op = k
 				if op == OpMinus {
 					op = OpSub
 				}
 			}
 		}
-		start += 1
 		if op == OpNull {
-			return nil, 1, fmt.Errorf("unrecognized operator '%s'", s[:1])
+			return nil, s[1:], fmt.Errorf("unrecognized operator in '%s'", s)
 		}
+		s = s[1:]
 	}
-	if start == len(s) {
-		return nil, len(s), fmt.Errorf("first operand missing")
+	if s == "" {
+		return nil, s, fmt.Errorf("first operand missing")
 	}
-	n1, e1, err := parseNodeFromString(s[start:])
+	n1, s1, err := parseNodeFromString(s)
 	if err != nil {
-		return nil, start + e1, err
+		return nil, s1, err
 	}
 	if op > OpPow {
-		return newNode(n1, op, nil), start + e1, nil
+		return newNode(n1, op, nil), s1, nil
 	} else {
-		n2, e2, err := parseNodeFromString(s[start+e1:])
+		n2, s2, err := parseNodeFromString(s1)
 		if err != nil {
-			return nil, start + e1 + e2, fmt.Errorf("second operand missing")
+			return nil, s2, fmt.Errorf("second operand missing")
 		} else {
-			return newNode(n1, op, n2), start + e1 + e2, nil
+			return newNode(n1, op, n2), s2, nil
 		}
 	}
 }
@@ -147,7 +144,7 @@ func parseNodeFromString(s string) (*Node, int, error) {
 var ratRx *regexp.Regexp // Regular expression for a rational number
 
 func init() {
-	ratRx = regexp.MustCompile("^\\s*-?[0-9]+(/[0-9]+)")
+	ratRx = regexp.MustCompile("^\\s*-?[0-9]+(/[0-9]+)?")
 }
 
 // Depth returns distance of the deepest leaf to the root.
