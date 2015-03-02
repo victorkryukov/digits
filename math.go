@@ -100,3 +100,14 @@ func pow(a, b int64) int64 {
 		return int64(p)
 	}
 }
+
+func gcd(a, b int64) int64 {
+	if a <= 0 && b <= 0 {
+		return MaxInt64
+	} else if a == 0 {
+		return b
+	} else if b == 0 {
+		return a
+	}
+	return gcd(b, a%b)
+}

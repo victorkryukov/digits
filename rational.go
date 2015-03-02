@@ -56,17 +56,6 @@ func (r rational) Normalize() rational {
 	return rational{n: n1 / g, d: d1 / g}
 }
 
-func gcd(a, b int64) int64 {
-	if a <= 0 && b <= 0 {
-		return MaxInt64
-	} else if a == 0 {
-		return b
-	} else if b == 0 {
-		return a
-	}
-	return gcd(b, a%b)
-}
-
 // Add returns r + r1
 func (r rational) Add(r1 rational) rational {
 	if r.d == 1 && r1.d == 1 {
