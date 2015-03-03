@@ -167,7 +167,9 @@ func TestNodeEval(t *testing.T) {
 		assert.NoError(err)
 		v, err := n.Eval()
 		assert.NoError(err)
-		assert.Equal(v, newRational(tc.v))
+		v1, err := newRationalFromString(tc.v)
+		assert.NoError(err)
+		assert.Equal(v, v1)
 	}
 
 	n1 := &Node{left: nil, op: OpAdd, right: newIntNode(5)}
@@ -181,5 +183,20 @@ func TestNodeEval(t *testing.T) {
 	for _, n := range []*Node{n1, n2, n3, n4, n5, n6, n7, n8} {
 		_, err := n.Eval()
 		assert.Error(err)
+	}
+}
+
+func TestNodeSimplify(t *testing.T) {
+	assert := assert.New(t)
+	for _, n := range allNodes[maxNodeDepth-1] {
+		n1 := n.Simplify()
+		v, e := n.Eval()
+		v1, e1 := n1.Eval()
+		if e != nil {
+			assert.Error(e1, "%s evaluated to error so %s should also be error", n, n1)
+		} else {
+			assert.NoError(e1, "%s evaluated without error so %s should also be OK", n, n1)
+			assert.Equal(v, v1, "%s = %s  but  %s = %s", n, v, n1, v1)
+		}
 	}
 }

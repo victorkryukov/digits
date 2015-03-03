@@ -6,26 +6,23 @@ import (
 	"strings"
 )
 
-type Op byte // Operators
+// Op encode an operation that can be perfomed on the source digits.
+type Op byte
 
 const (
 	OpNull Op = iota
-
-	// Binary ops start here
-	OpAdd
+	OpAdd     // Binary ops start here
 	OpSub
 	OpMul
 	OpDiv
 	OpPow
-
-	// Unary ops start here
-	OpFact
+	OpFact // Unary ops start here
 	OpSqrt
 	OpMinus // unary minus
 )
 
 var opNames = map[Op]string{
-	OpNull:  "NULL",
+	OpNull:  "null",
 	OpAdd:   "+",
 	OpSub:   "-",
 	OpMul:   "*",
@@ -33,7 +30,7 @@ var opNames = map[Op]string{
 	OpPow:   "^",
 	OpFact:  "!",
 	OpSqrt:  "sqrt",
-	OpMinus: "-",
+	OpMinus: "--",
 }
 
 // unary returns true for unary operators
@@ -51,12 +48,28 @@ func (op Op) String() string {
 	return opNames[op]
 }
 
+// Value defines an interface for anything on which above operations can be performed.
+type Value interface {
+	PerformUnary(Op) (Value, error)
+	PerformBinary(Op, Value) (Value, error)
+	Equal(Value) bool
+	Less(Value) bool
+	String() string
+	IsInteger() bool
+	Negative() bool
+	// The following methods are needed for some simplifications
+	Even() bool
+	Zero() bool
+	One() bool
+	MinusOne() bool
+}
+
 // Node represents a formula parse tree, storing value (for a leaf) or
 // operand with left and right sub-nodes. Nodes with unary operators will have their
 // right sub-node nil, which is checked by Node.valid().
 type Node struct {
 	left, right *Node
-	val         rational
+	val         Value
 	op          Op
 }
 
@@ -81,13 +94,14 @@ func newNode(left *Node, op Op, right *Node) *Node {
 }
 
 // newValNode creates a new value Node from a rational.
-func newValNode(val rational) *Node {
-	return &Node{val: val.Normalize()}
+func newValNode(val Value) *Node {
+	return &Node{val: val}
 }
 
 // newIntNode creates a new value Node from an integer.
 func newIntNode(val int64) *Node {
-	return &Node{val: rational{n: val, d: 1}}
+	r, _ := newRational(val, 1)
+	return &Node{val: r}
 }
 
 // FromPolish parses a node from a string, and returns an error if the input is invalid.
@@ -132,7 +146,11 @@ func parseNodeFromString(s string) (*Node, string, error) {
 	s = strings.TrimSpace(s)
 	// Try to parse rational first
 	if ind := ratRx.FindStringIndex(s); ind != nil {
-		return newValNode(newRational(strings.TrimSpace(s[:ind[1]]))), s[ind[1]:], nil
+		v, err := newRationalFromString(strings.TrimSpace(s[:ind[1]]))
+		if err != nil {
+			return nil, s[ind[1]:], err
+		}
+		return newValNode(v), s[ind[1]:], nil
 	}
 	if s == "" {
 		return nil, "", fmt.Errorf("empty string")
@@ -211,7 +229,7 @@ func (n *Node) Equal(n1 *Node) bool {
 
 // Eval evaluates formula value, and raises an error if the result is invalid
 // or cannot be represented by a rational.
-func (n *Node) Eval() (rational, error) {
+func (n *Node) Eval() (Value, error) {
 	if !n.valid() {
 		return rational{}, fmt.Errorf("invalid formula %s", n)
 	}
@@ -220,42 +238,20 @@ func (n *Node) Eval() (rational, error) {
 	} else if n.op.binary() {
 		left, err := n.left.Eval()
 		if err != nil {
-			return rational{}, err
+			return n.val, err
 		}
 		right, err := n.right.Eval()
 		if err != nil {
-			return rational{}, err
+			return n.val, err
 		}
-		switch n.op {
-		case OpAdd:
-			return left.Add(right), nil
-		case OpSub:
-			return left.Sub(right), nil
-		case OpMul:
-			return left.Mul(right), nil
-		case OpDiv:
-			if right.Zero() {
-				return rational{}, fmt.Errorf("division by 0")
-			}
-			return left.Div(right), nil
-		case OpPow:
-			return left.Pow(right)
-		}
+		return left.PerformBinary(n.op, right)
 	} else {
 		left, err := n.left.Eval()
 		if err != nil {
-			return rational{}, err
+			return n.val, err
 		}
-		switch n.op {
-		case OpFact:
-			return left.Fact()
-		case OpSqrt:
-			return left.Sqrt()
-		case OpMinus:
-			return left.Minus(), nil
-		}
+		return left.PerformUnary(n.op)
 	}
-	return rational{}, fmt.Errorf("Unreachable state")
 }
 
 // transformDuo transorms all expressions of the form (op1 a) op2 (op3 b) into op4 (a op5 b),

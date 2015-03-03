@@ -12,7 +12,7 @@ import (
 // where digits is the original digits string. We cannot use binary operator for s1, s2
 // if s1.end != s2.start
 type Solution struct {
-	val        rational
+	val        Value
 	start, end int
 }
 
@@ -56,33 +56,14 @@ func (s Solution) Add(v *Node) {
 // Apply an unary operator to this solution, if possible, and add to all solutions
 // found so far.
 func (s Solution) Unary(op Op) Solution {
-	if s.val.Zero() || (s.val.Equal(rational{1, 1}) && op != OpMinus) {
+	if s.val.Zero() || (s.val.One() && op != OpMinus) {
 		return s
 	}
-	var s1 Solution
-	switch op {
-	case OpMinus:
-		s1 = Solution{val: s.val.Minus(), start: s.start, end: s.end}
-	case OpFact:
-		if s.val.Less(rational{3, 1}) {
-			return NoSolution
-		}
-		f, err := s.val.Fact()
-		if err == nil {
-			s1 = Solution{val: f, start: s.start, end: s.end}
-		} else {
-			return NoSolution
-		}
-	case OpSqrt:
-		sq, err := s.val.Sqrt()
-		if err == nil {
-			s1 = Solution{val: sq, start: s.start, end: s.end}
-		} else {
-			return NoSolution
-		}
-	default:
+	v1, err := s.val.PerformUnary(op)
+	if err != nil {
 		return NoSolution
 	}
+	s1 := Solution{val: v1, start: s.start, end: s.end}
 	for _, n := range solutions[s] {
 		if n.op == OpMinus && op == OpMinus {
 			continue
@@ -98,43 +79,11 @@ func (s1 Solution) Binary(op Op, s2 Solution) Solution {
 	if s1.end != s2.start {
 		return NoSolution
 	}
-	var s3 Solution
-	switch op {
-	case OpAdd:
-		s3 = Solution{
-			val:   s1.val.Add(s2.val),
-			start: s1.start, end: s2.end,
-		}
-	case OpSub:
-		s3 = Solution{
-			val:   s1.val.Sub(s2.val),
-			start: s1.start, end: s2.end,
-		}
-	case OpMul:
-		s3 = Solution{
-			val:   s1.val.Mul(s2.val),
-			start: s1.start, end: s2.end,
-		}
-	case OpDiv:
-		if s2.val.Zero() {
-			return NoSolution
-		}
-		s3 = Solution{
-			val:   s1.val.Div(s2.val),
-			start: s1.start, end: s2.end,
-		}
-	case OpPow:
-		if p, err := s1.val.Pow(s2.val); err == nil {
-			s3 = Solution{
-				val:   p,
-				start: s1.start, end: s2.end,
-			}
-		} else {
-			return NoSolution
-		}
-	default:
+	v1, err := s1.val.PerformBinary(op, s2.val)
+	if err != nil {
 		return NoSolution
 	}
+	s3 := Solution{val: v1, start: s1.start, end: s2.end}
 	for _, n1 := range solutions[s1] {
 		for _, n2 := range solutions[s2] {
 			if op == OpMinus && n2.op == OpMinus {
@@ -175,8 +124,9 @@ func (s Solution) AllUnary() SolutionSlice {
 	if s.val.Zero() {
 		return SolutionSlice{s}
 	}
-	if s.val.Equal(rational{1, 1}) || s.val.Equal(rational{-1, 1}) {
-		return SolutionSlice{s, Solution{s.val.Minus(), s.start, s.end}}
+	if s.val.One() || s.val.MinusOne() {
+		minusS, _ := s.val.PerformUnary(OpMinus)
+		return SolutionSlice{s, Solution{minusS, s.start, s.end}}
 	}
 	result := SolutionSlice{s}
 	s1 := s.Unary(OpMinus)
@@ -190,12 +140,10 @@ func (s Solution) AllUnary() SolutionSlice {
 			s = s1
 		}
 	}
-
 	for f := s.Unary(OpFact); f != NoSolution; f = f.Unary(OpFact) {
 		result = append(result, f)
 		result = append(result, f.Unary(OpMinus))
 	}
-
 	for sq := s.Unary(OpSqrt); sq != NoSolution; sq = sq.Unary(OpSqrt) {
 		result = append(result, sq)
 		for f := sq.Unary(OpFact); f != NoSolution; f = f.Unary(OpFact) {
@@ -255,7 +203,7 @@ func atoi(s string) int64 {
 func (p SolutionSlice) Print(all bool, min, max int64) {
 	p.Sort()
 	for _, f := range p {
-		if min <= max && !f.val.Integer() || (f.val.Less(rational{min, 1}) || rational{max, 1}.Less(f.val)) {
+		if min <= max && !f.val.IsInteger() || (f.val.Less(rational{min, 1}) || rational{max, 1}.Less(f.val)) {
 			continue
 		}
 		if all {
